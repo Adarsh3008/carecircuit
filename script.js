@@ -1,10 +1,7 @@
-const GOOGLE_MAPS_API_KEY = "YOUR_API_KEY_HERE";
-const GOOGLE_MAPS_LIBRARIES = ["places"];
-const GOOGLE_MAPS_SCRIPT_ID = "googleMapsApiScript";
-const GOOGLE_MAPS_PLACE_LABELS = {
-  Hospital: "Nearby Hospitals",
-  Pharmacy: "Nearby Pharmacies",
-  Doctor: "Nearby Doctors",
+const NEARBY_MAP_LINKS = {
+  hospitals: "https://www.google.com/maps/search/hospital+near+me",
+  pharmacies: "https://www.google.com/maps/search/pharmacy+near+me",
+  doctors: "https://www.google.com/maps/search/doctor+near+me",
 };
 
 const buttons = document.querySelectorAll(".action-tile");
@@ -87,8 +84,9 @@ const deleteProfileConfirm = document.querySelector("#deleteProfileConfirm");
 const activeMemberStatus = document.querySelector("#activeMemberStatus");
 const nearbySection = document.querySelector("#nearbySection");
 const nearbyStatus = document.querySelector("#nearbyStatus");
-const retryNearbyButton = document.querySelector("#retryNearbyButton");
-const nearbyResults = document.querySelector("#nearbyResults");
+const findHospitalsButton = document.querySelector("#findHospitalsButton");
+const findPharmaciesButton = document.querySelector("#findPharmaciesButton");
+const findDoctorsButton = document.querySelector("#findDoctorsButton");
 const buyOnlineModal = document.querySelector("#buyModal");
 const buyOnlineClose = document.querySelector("#closeModal");
 const googleSearchLink = document.querySelector("#googleLink");
@@ -99,8 +97,6 @@ const PRESCRIPTION_STORAGE_KEY = "prescriptions";
 const MEDICINE_STORAGE_KEY = "medicines";
 const DOSE_STORAGE_KEY = "doseHistory";
 const APP_STORAGE_KEY = "careCircuitData";
-const NEARBY_RADIUS_METERS = 5000;
-const NEARBY_PLACE_TYPES = ["hospital", "pharmacy", "doctor"];
 const REMINDER_GRACE_PERIOD = 10 * 60 * 1000;
 const DEFAULT_REMINDER_DURATION_DAYS = 7;
 const TIME_OF_DAY_TO_CLOCK_TIME = {
@@ -137,11 +133,8 @@ const MEDICINE_INFO_DATABASE = {
 };
 let activeReminders = [];
 let pendingDose;
-let nearbyServicesLoaded = false;
-let nearbyRequestInFlight = false;
 let reminderTimeouts = {};
 let missedDoseTimers = {};
-let googleMapsLoadPromise;
 let editingFamilyMemberName = "";
 let pendingDeleteMemberCallback = null;
 let lastFocusedElementBeforeDeleteModal = null;
@@ -509,76 +502,9 @@ function closeBuyOnlineModal() {
   buyOnlineModal.style.display = "none";
 }
 
-function setNearbyStatus(message, isError = false) {
+function setNearbyStatus(message) {
   nearbyStatus.textContent = message;
-  nearbyStatus.className = isError ? "nearby-status is-error" : "nearby-status";
-}
-
-function setNearbyRetryVisibility(shouldShow) {
-  retryNearbyButton.hidden = !shouldShow;
-}
-
-function getGeolocationErrorMessage(error) {
-  if (!error) {
-    return "We could not access your location. Please try again.";
-  }
-
-  if (error.code === error.PERMISSION_DENIED) {
-    return "Location permission was denied. Please enable location to use Nearby Help.";
-  }
-
-  if (error.code === error.TIMEOUT) {
-    return "Location request timed out. Please try again.";
-  }
-
-  if (error.code === error.POSITION_UNAVAILABLE) {
-    return "Your location is unavailable right now. Please try again in a moment.";
-  }
-
-  return "We could not get your location right now. Please try again.";
-}
-
-function getNearbySearchErrorMessage() {
-  return "Unable to fetch nearby locations. Please enable location or try again.";
-}
-
-function hasGoogleMapsApiKey() {
-  return Boolean(
-    GOOGLE_MAPS_API_KEY &&
-    GOOGLE_MAPS_API_KEY !== "YOUR_API_KEY_HERE"
-  );
-}
-
-function getGoogleMapsScriptUrl() {
-  return `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&libraries=${encodeURIComponent(GOOGLE_MAPS_LIBRARIES.join(","))}`;
-}
-
-function ensureGoogleMapsScriptTag() {
-  const existingScript =
-    document.querySelector(`#${GOOGLE_MAPS_SCRIPT_ID}`) ||
-    document.querySelector('script[data-google-maps-loader="true"]');
-
-  if (existingScript) {
-    existingScript.id = GOOGLE_MAPS_SCRIPT_ID;
-    existingScript.dataset.googleMapsLoader = "true";
-
-    if (existingScript.src !== getGoogleMapsScriptUrl()) {
-      existingScript.src = getGoogleMapsScriptUrl();
-    }
-
-    existingScript.async = true;
-    existingScript.defer = true;
-    return existingScript;
-  }
-
-  const script = document.createElement("script");
-  script.id = GOOGLE_MAPS_SCRIPT_ID;
-  script.dataset.googleMapsLoader = "true";
-  script.async = true;
-  script.defer = true;
-  script.src = getGoogleMapsScriptUrl();
-  document.body.appendChild(script);
-  return script;
+  nearbyStatus.className = "nearby-status";
 }
 
 function getOcrErrorMessage(error) {
@@ -597,336 +523,9 @@ function getOcrErrorMessage(error) {
   return "Could not scan this prescription. Please use a clearer image and try again.";
 }
 
-function loadGoogleMapsPlacesApi() {
-  if (window.google && google.maps && google.maps.places) {
-    return Promise.resolve(window.google.maps);
-  }
-
-  if (!hasGoogleMapsApiKey()) {
-    return Promise.reject(new Error("missing-google-maps-api-key"));
-  }
-
-  if (googleMapsLoadPromise) {
-    return googleMapsLoadPromise;
-  }
-
-  googleMapsLoadPromise = new Promise((resolve, reject) => {
-    const script = ensureGoogleMapsScriptTag();
-
-    const handleLoad = () => {
-      if (window.google && google.maps && google.maps.places) {
-        resolve(window.google.maps);
-        return;
-      }
-
-      reject(new Error("google-maps-places-unavailable"));
-    };
-
-    const handleError = () => {
-      reject(new Error("google-maps-script-load-failed"));
-    };
-
-    script.addEventListener("load", handleLoad, { once: true });
-    script.addEventListener("error", handleError, { once: true });
-
-    if (script.src !== getGoogleMapsScriptUrl()) {
-      script.src = getGoogleMapsScriptUrl();
-      return;
-    }
-
-    if (window.google && google.maps && google.maps.places) {
-      resolve(window.google.maps);
-      return;
-    }
-
-    if (!script.src) {
-      script.src = getGoogleMapsScriptUrl();
-    }
-  }).catch((error) => {
-    googleMapsLoadPromise = null;
-    throw error;
-  });
-
-  return googleMapsLoadPromise;
-}
-
-function getNearbyServiceType(types = []) {
-  if (types.includes("hospital")) {
-    return "Hospital";
-  }
-
-  if (types.includes("pharmacy")) {
-    return "Pharmacy";
-  }
-
-  if (types.includes("doctor")) {
-    return "Doctor";
-  }
-
-  return "Medical Service";
-}
-
-function searchNearbyPlaces(service, request) {
-  return new Promise((resolve, reject) => {
-    service.nearbySearch(request, (results, status) => {
-      if (
-        status === google.maps.places.PlacesServiceStatus.OK ||
-        status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS
-      ) {
-        resolve(results || []);
-        return;
-      }
-
-      reject(new Error(`Nearby search failed with status: ${status}`));
-    });
-  });
-}
-
-function normalizePlaceResults(results) {
-  const seen = new Set();
-
-  return results
-    .map((place) => {
-      if (!place.place_id || seen.has(place.place_id)) {
-        return null;
-      }
-
-      seen.add(place.place_id);
-
-      return {
-        name: place.name || "Unnamed Medical Service",
-        type: getNearbyServiceType(place.types || []),
-        ratingText: typeof place.rating === "number" ? place.rating.toFixed(1) : "",
-        address: place.vicinity || place.formatted_address || "Address not available",
-      };
-    })
-    .filter(Boolean)
-    .slice(0, 12);
-}
-
-function getServiceType(tags = {}) {
-  if (tags.amenity === "hospital") {
-    return "Hospital";
-  }
-
-  if (tags.amenity === "clinic") {
-    return "Clinic";
-  }
-
-  if (tags.amenity === "pharmacy") {
-    return "Pharmacy";
-  }
-
-  return "Medical Service";
-}
-
-function formatDistance(distanceInMeters) {
-  if (distanceInMeters < 1000) {
-    return `${Math.round(distanceInMeters)} m away`;
-  }
-
-  return `${(distanceInMeters / 1000).toFixed(1)} km away`;
-}
-
-function calculateDistance(lat1, lon1, lat2, lon2) {
-  const earthRadius = 6371000;
-  const toRadians = (value) => (value * Math.PI) / 180;
-  const latDistance = toRadians(lat2 - lat1);
-  const lonDistance = toRadians(lon2 - lon1);
-  const a =
-    Math.sin(latDistance / 2) * Math.sin(latDistance / 2) +
-    Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(lonDistance / 2) *
-      Math.sin(lonDistance / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return earthRadius * c;
-}
-
-function createNearbyCard(service) {
-  const item = document.createElement("article");
-  const header = document.createElement("div");
-  const info = document.createElement("div");
-  const name = document.createElement("h3");
-  const meta = document.createElement("p");
-  const address = document.createElement("p");
-  const openButton = document.createElement("a");
-
-  item.className = "history-item nearby-card";
-  header.className = "nearby-card-header";
-  info.className = "nearby-card-info";
-  name.textContent = service.name;
-  meta.textContent = service.ratingText
-    ? `${service.type} | Rating: ${service.ratingText}`
-    : service.type;
-  address.className = "nearby-address";
-  address.textContent = service.address;
-  openButton.className = "map-link-button";
-  openButton.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${service.name} ${service.address}`.trim())}`;
-  openButton.target = "_blank";
-  openButton.rel = "noreferrer noopener";
-  openButton.textContent = "Open in Google Maps";
-
-  info.append(name, meta, address);
-  header.append(info, openButton);
-  item.appendChild(header);
-  return item;
-}
-
-function renderNearbyResults(services) {
-  nearbyResults.textContent = "";
-
-  if (services.length === 0) {
-    showEmptyHistory(nearbyResults, "No nearby services found right now.");
-    return;
-  }
-
-  Object.entries(GOOGLE_MAPS_PLACE_LABELS).forEach(([type, label]) => {
-    const matchingServices = services.filter((service) => service.type === type);
-
-    if (matchingServices.length === 0) {
-      return;
-    }
-
-    const group = document.createElement("section");
-    const title = document.createElement("h3");
-    const list = document.createElement("div");
-
-    group.className = "nearby-group";
-    title.className = "nearby-group-title";
-    title.textContent = label;
-    list.className = "nearby-group-list";
-
-    matchingServices.forEach((service) => {
-      list.appendChild(createNearbyCard(service));
-    });
-
-    group.append(title, list);
-    nearbyResults.appendChild(group);
-  });
-}
-
-function buildOverpassQuery(latitude, longitude) {
-  return `
-    [out:json];
-    (
-      node["amenity"="hospital"](around:${NEARBY_RADIUS_METERS},${latitude},${longitude});
-      way["amenity"="hospital"](around:${NEARBY_RADIUS_METERS},${latitude},${longitude});
-      relation["amenity"="hospital"](around:${NEARBY_RADIUS_METERS},${latitude},${longitude});
-      node["amenity"="pharmacy"](around:${NEARBY_RADIUS_METERS},${latitude},${longitude});
-      way["amenity"="pharmacy"](around:${NEARBY_RADIUS_METERS},${latitude},${longitude});
-      relation["amenity"="pharmacy"](around:${NEARBY_RADIUS_METERS},${latitude},${longitude});
-      node["amenity"="clinic"](around:${NEARBY_RADIUS_METERS},${latitude},${longitude});
-      way["amenity"="clinic"](around:${NEARBY_RADIUS_METERS},${latitude},${longitude});
-      relation["amenity"="clinic"](around:${NEARBY_RADIUS_METERS},${latitude},${longitude});
-    );
-    out center tags;
-  `.trim();
-}
-
-function normalizeOverpassResults(elements, userLatitude, userLongitude) {
-  const seen = new Set();
-
-  return elements
-    .map((element) => {
-      const latitude = element.lat ?? element.center?.lat;
-      const longitude = element.lon ?? element.center?.lon;
-
-      if (!latitude || !longitude) {
-        return null;
-      }
-
-      const name = element.tags?.name || `Unnamed ${getServiceType(element.tags)}`;
-      const type = getServiceType(element.tags);
-      const key = `${name}-${latitude}-${longitude}`;
-
-      if (seen.has(key)) {
-        return null;
-      }
-
-      seen.add(key);
-
-      return {
-        name,
-        type,
-        lat: latitude,
-        lon: longitude,
-        distance: calculateDistance(userLatitude, userLongitude, latitude, longitude),
-      };
-    })
-    .filter(Boolean)
-    .sort((first, second) => first.distance - second.distance)
-    .slice(0, 12);
-}
-
-function fetchNearbyServices() {
-  if (!navigator.geolocation || !hasGoogleMapsApiKey()) {
-    setNearbyStatus("Unable to fetch nearby locations. Please enable location or try again.", true);
-    nearbyResults.textContent = "";
-    setNearbyRetryVisibility(true);
-    return;
-  }
-
-  if (nearbyRequestInFlight) {
-    return;
-  }
-
-  nearbyRequestInFlight = true;
-  nearbyServicesLoaded = false;
-  nearbyResults.textContent = "";
-  setNearbyRetryVisibility(false);
-  setNearbyStatus("Fetching nearby hospitals...");
-
-  navigator.geolocation.getCurrentPosition(
-    async (position) => {
-      try {
-        await loadGoogleMapsPlacesApi();
-        const location = new google.maps.LatLng(
-          position.coords.latitude,
-          position.coords.longitude
-        );
-        const placesService = new google.maps.places.PlacesService(document.createElement("div"));
-        const searchResults = await Promise.all(
-          NEARBY_PLACE_TYPES.map((type) => {
-            return searchNearbyPlaces(placesService, {
-              location,
-              radius: NEARBY_RADIUS_METERS,
-              type,
-            });
-          })
-        );
-        const services = normalizePlaceResults(searchResults.flat());
-
-        renderNearbyResults(services);
-        setNearbyStatus(
-          services.length > 0
-            ? "Nearby hospitals, pharmacies, and doctors"
-            : "No nearby medical services found in your area."
-        );
-        setNearbyRetryVisibility(true);
-        nearbyServicesLoaded = true;
-      } catch (error) {
-        console.error(error);
-        nearbyResults.textContent = "";
-        setNearbyStatus(getNearbySearchErrorMessage(error), true);
-        setNearbyRetryVisibility(true);
-      } finally {
-        nearbyRequestInFlight = false;
-      }
-    },
-    () => {
-      nearbyRequestInFlight = false;
-      nearbyResults.textContent = "";
-      setNearbyStatus("Unable to fetch nearby locations. Please enable location or try again.", true);
-      setNearbyRetryVisibility(true);
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 300000,
-    }
-  );
+function openNearbyMapSearch(url) {
+  window.open(url, "_blank");
+  setNearbyStatus("Tap below to find nearby healthcare services");
 }
 
 function getTodayText() {
@@ -3167,9 +2766,6 @@ function showSection(sectionId, options = {}) {
     section.style.display = section.id === sectionId ? "block" : "none";
   });
 
-  if (sectionId === "nearbySection" && !nearbyServicesLoaded) {
-    fetchNearbyServices();
-  }
 }
 
 function showHome() {
@@ -3282,8 +2878,14 @@ function initializeEventListeners() {
     });
   });
 
-  retryNearbyButton.addEventListener("click", () => {
-    fetchNearbyServices();
+  findHospitalsButton.addEventListener("click", () => {
+    openNearbyMapSearch(NEARBY_MAP_LINKS.hospitals);
+  });
+  findPharmaciesButton.addEventListener("click", () => {
+    openNearbyMapSearch(NEARBY_MAP_LINKS.pharmacies);
+  });
+  findDoctorsButton.addEventListener("click", () => {
+    openNearbyMapSearch(NEARBY_MAP_LINKS.doctors);
   });
 
   document.querySelector("#closeModal").onclick = () => {
