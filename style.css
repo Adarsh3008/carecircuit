@@ -631,29 +631,16 @@ p {
   font-weight: 700;
 }
 
-.nearby-status.is-error {
-  background: #fff2ef;
-  border-color: #ffd8ce;
-  color: #b54d32;
-}
-
-.nearby-results {
-  margin-top: 0;
-}
-
 .nearby-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.retry-nearby-button {
-  margin-bottom: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 12px;
+  margin: 0 auto;
 }
 
 .nearby-open-maps {
-  min-width: auto;
+  min-width: 0;
 }
 
 .ocr-history-item {
@@ -677,66 +664,24 @@ p {
   white-space: pre-wrap;
 }
 
-.nearby-group {
-  display: grid;
-  gap: 12px;
-}
-
-.nearby-group-title {
-  margin: 0;
-  color: #153d39;
-  font-size: 16px;
-}
-
-.nearby-group-list {
-  display: grid;
-  gap: 12px;
-}
-
-.nearby-card {
-  white-space: normal;
-}
-
-.nearby-card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.nearby-card-info h3 {
-  margin: 0;
-  font-size: 15px;
-  color: #153d39;
-}
-
-.nearby-card-info p {
-  margin: 6px 0 0;
-  max-width: none;
-  font-size: 13px;
-  color: #607775;
-}
-
-.nearby-address {
-  margin-top: 8px;
-  color: #153d39;
-  line-height: 1.45;
-}
-
 .map-link-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 132px;
-  padding: 10px 12px;
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  padding: 14px 16px;
   border-radius: 12px;
+  border: 0;
   background: linear-gradient(135deg, #20b497, #2f83d8);
   color: #ffffff;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   line-height: 1.2;
   text-decoration: none;
   box-shadow: 0 10px 20px rgba(47, 131, 216, 0.16);
+  cursor: pointer;
 }
 
 .map-link-button:active {
