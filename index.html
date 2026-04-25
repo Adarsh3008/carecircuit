@@ -204,18 +204,13 @@
     <section class="feature-card info-card" id="nearbySection">
       <button type="button" class="back-button">Back</button>
       <h2>Nearby Help</h2>
-      <p class="section-note">Find nearby hospitals, pharmacies, and doctors based on your current location.</p>
-      <div class="nearby-status" id="nearbyStatus">Open this section to load nearby help.</div>
+      <p class="section-note">Tap below to find nearby healthcare services</p>
+      <div class="nearby-status" id="nearbyStatus">Tap below to find nearby healthcare services</div>
       <div class="nearby-actions">
-        <button type="button" class="save-button retry-nearby-button" id="retryNearbyButton" hidden>Retry Nearby Search</button>
-        <a
-          class="map-link-button nearby-open-maps"
-          href="https://www.google.com/maps/search/hospital+near+me"
-          target="_blank"
-          rel="noreferrer noopener"
-        >Open in Google Maps</a>
+        <button type="button" class="map-link-button nearby-open-maps" id="findHospitalsButton">Find Hospitals</button>
+        <button type="button" class="map-link-button nearby-open-maps" id="findPharmaciesButton">Find Pharmacies</button>
+        <button type="button" class="map-link-button nearby-open-maps" id="findDoctorsButton">Find Doctors</button>
       </div>
-      <div class="history-list nearby-results" id="nearbyResults"></div>
     </section>
   </main>
 
@@ -284,13 +279,6 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script
-    id="googleMapsApiScript"
-    data-google-maps-loader="true"
-    src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&libraries=places"
-    async
-    defer
-  ></script>
   <script src="script.js"></script>
 </body>
 </html>
