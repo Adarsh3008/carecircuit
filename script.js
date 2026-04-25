@@ -1,5 +1,11 @@
-const GOOGLE_MAPS_API_KEY = "YOUR_KEY";
+const GOOGLE_MAPS_API_KEY = "YOUR_API_KEY_HERE";
 const GOOGLE_MAPS_LIBRARIES = ["places"];
+const GOOGLE_MAPS_SCRIPT_ID = "googleMapsApiScript";
+const GOOGLE_MAPS_PLACE_LABELS = {
+  Hospital: "Nearby Hospitals",
+  Pharmacy: "Nearby Pharmacies",
+  Doctor: "Nearby Doctors",
+};
 
 const buttons = document.querySelectorAll(".action-tile");
 const backButtons = document.querySelectorAll(".back-button");
@@ -532,24 +538,47 @@ function getGeolocationErrorMessage(error) {
   return "We could not get your location right now. Please try again.";
 }
 
-function getNearbySearchErrorMessage(error) {
-  if (!error || !error.message) {
-    return "Nearby search is not available right now. Please try again.";
+function getNearbySearchErrorMessage() {
+  return "Unable to fetch nearby locations. Please enable location or try again.";
+}
+
+function hasGoogleMapsApiKey() {
+  return Boolean(
+    GOOGLE_MAPS_API_KEY &&
+    GOOGLE_MAPS_API_KEY !== "YOUR_API_KEY_HERE"
+  );
+}
+
+function getGoogleMapsScriptUrl() {
+  return `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&libraries=${encodeURIComponent(GOOGLE_MAPS_LIBRARIES.join(","))}`;
+}
+
+function ensureGoogleMapsScriptTag() {
+  const existingScript =
+    document.querySelector(`#${GOOGLE_MAPS_SCRIPT_ID}`) ||
+    document.querySelector('script[data-google-maps-loader="true"]');
+
+  if (existingScript) {
+    existingScript.id = GOOGLE_MAPS_SCRIPT_ID;
+    existingScript.dataset.googleMapsLoader = "true";
+
+    if (existingScript.src !== getGoogleMapsScriptUrl()) {
+      existingScript.src = getGoogleMapsScriptUrl();
+    }
+
+    existingScript.async = true;
+    existingScript.defer = true;
+    return existingScript;
   }
 
-  if (error.message === "missing-google-maps-api-key") {
-    return "Google Maps is not configured yet. Add your API key in the config section.";
-  }
-
-  if (error.message === "google-maps-script-load-failed") {
-    return "Google Maps could not load. Please check your internet connection and try again.";
-  }
-
-  if (error.message === "google-maps-places-unavailable") {
-    return "Google Places is unavailable right now. Please try again.";
-  }
-
-  return "We could not fetch nearby services right now. Please tap retry.";
+  const script = document.createElement("script");
+  script.id = GOOGLE_MAPS_SCRIPT_ID;
+  script.dataset.googleMapsLoader = "true";
+  script.async = true;
+  script.defer = true;
+  script.src = getGoogleMapsScriptUrl();
+  document.body.appendChild(script);
+  return script;
 }
 
 function getOcrErrorMessage(error) {
@@ -573,7 +602,7 @@ function loadGoogleMapsPlacesApi() {
     return Promise.resolve(window.google.maps);
   }
 
-  if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === "YOUR_KEY") {
+  if (!hasGoogleMapsApiKey()) {
     return Promise.reject(new Error("missing-google-maps-api-key"));
   }
 
@@ -582,30 +611,9 @@ function loadGoogleMapsPlacesApi() {
   }
 
   googleMapsLoadPromise = new Promise((resolve, reject) => {
-    const existingScript = document.querySelector('script[data-google-maps-loader="true"]');
+    const script = ensureGoogleMapsScriptTag();
 
-    if (existingScript) {
-      existingScript.addEventListener("load", () => {
-        if (window.google && google.maps && google.maps.places) {
-          resolve(window.google.maps);
-          return;
-        }
-
-        reject(new Error("google-maps-places-unavailable"));
-      }, { once: true });
-      existingScript.addEventListener("error", () => {
-        reject(new Error("google-maps-script-load-failed"));
-      }, { once: true });
-      return;
-    }
-
-    const script = document.createElement("script");
-
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&libraries=${encodeURIComponent(GOOGLE_MAPS_LIBRARIES.join(","))}`;
-    script.async = true;
-    script.defer = true;
-    script.dataset.googleMapsLoader = "true";
-    script.onload = () => {
+    const handleLoad = () => {
       if (window.google && google.maps && google.maps.places) {
         resolve(window.google.maps);
         return;
@@ -613,10 +621,27 @@ function loadGoogleMapsPlacesApi() {
 
       reject(new Error("google-maps-places-unavailable"));
     };
-    script.onerror = () => {
+
+    const handleError = () => {
       reject(new Error("google-maps-script-load-failed"));
     };
-    document.head.appendChild(script);
+
+    script.addEventListener("load", handleLoad, { once: true });
+    script.addEventListener("error", handleError, { once: true });
+
+    if (script.src !== getGoogleMapsScriptUrl()) {
+      script.src = getGoogleMapsScriptUrl();
+      return;
+    }
+
+    if (window.google && google.maps && google.maps.places) {
+      resolve(window.google.maps);
+      return;
+    }
+
+    if (!script.src) {
+      script.src = getGoogleMapsScriptUrl();
+    }
   }).catch((error) => {
     googleMapsLoadPromise = null;
     throw error;
@@ -738,10 +763,10 @@ function createNearbyCard(service) {
   address.className = "nearby-address";
   address.textContent = service.address;
   openButton.className = "map-link-button";
-  openButton.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(service.name)}`;
+  openButton.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${service.name} ${service.address}`.trim())}`;
   openButton.target = "_blank";
   openButton.rel = "noreferrer noopener";
-  openButton.textContent = "Open in Maps";
+  openButton.textContent = "Open in Google Maps";
 
   info.append(name, meta, address);
   header.append(info, openButton);
@@ -757,8 +782,28 @@ function renderNearbyResults(services) {
     return;
   }
 
-  services.forEach((service) => {
-    nearbyResults.appendChild(createNearbyCard(service));
+  Object.entries(GOOGLE_MAPS_PLACE_LABELS).forEach(([type, label]) => {
+    const matchingServices = services.filter((service) => service.type === type);
+
+    if (matchingServices.length === 0) {
+      return;
+    }
+
+    const group = document.createElement("section");
+    const title = document.createElement("h3");
+    const list = document.createElement("div");
+
+    group.className = "nearby-group";
+    title.className = "nearby-group-title";
+    title.textContent = label;
+    list.className = "nearby-group-list";
+
+    matchingServices.forEach((service) => {
+      list.appendChild(createNearbyCard(service));
+    });
+
+    group.append(title, list);
+    nearbyResults.appendChild(group);
   });
 }
 
@@ -816,8 +861,8 @@ function normalizeOverpassResults(elements, userLatitude, userLongitude) {
 }
 
 function fetchNearbyServices() {
-  if (!navigator.geolocation) {
-    setNearbyStatus("Location is not supported on this device.", true);
+  if (!navigator.geolocation || !hasGoogleMapsApiKey()) {
+    setNearbyStatus("Unable to fetch nearby locations. Please enable location or try again.", true);
     nearbyResults.textContent = "";
     setNearbyRetryVisibility(true);
     return;
@@ -859,7 +904,7 @@ function fetchNearbyServices() {
             ? "Nearby hospitals, pharmacies, and doctors"
             : "No nearby medical services found in your area."
         );
-        setNearbyRetryVisibility(services.length === 0);
+        setNearbyRetryVisibility(true);
         nearbyServicesLoaded = true;
       } catch (error) {
         console.error(error);
@@ -870,10 +915,10 @@ function fetchNearbyServices() {
         nearbyRequestInFlight = false;
       }
     },
-    (error) => {
+    () => {
       nearbyRequestInFlight = false;
       nearbyResults.textContent = "";
-      setNearbyStatus(getGeolocationErrorMessage(error), true);
+      setNearbyStatus("Unable to fetch nearby locations. Please enable location or try again.", true);
       setNearbyRetryVisibility(true);
     },
     {
