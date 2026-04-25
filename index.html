@@ -1,0 +1,280 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CareCircuit</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <section class="intro-screen" aria-label="CareCircuit intro">
+    <div class="capsule" aria-hidden="true">
+      <div class="capsule-half capsule-top"></div>
+      <div class="capsule-half capsule-bottom"></div>
+    </div>
+    <p class="intro-title">CareCircuit</p>
+  </section>
+
+  <main class="phone-screen">
+    <section class="app-header">
+      <div class="app-icon" aria-hidden="true">+</div>
+      <h1>CareCircuit</h1>
+      <p>Your simple health companion for medicines, care, and family support.</p>
+      <div class="active-member-status" id="activeMemberStatus">Viewing: Me</div>
+    </section>
+
+    <section class="home-section" id="homeSection">
+      <div class="action-grid" aria-label="CareCircuit actions">      <button type="button" class="action-tile" data-section="uploadSection">
+        <span class="tile-icon" aria-hidden="true">Rx</span>
+        <span class="tile-text">Upload Prescription</span>
+      </button>
+      <button type="button" class="action-tile" data-section="medicalRecordsSection">
+        <span class="tile-icon" aria-hidden="true">&#128203;</span>
+        <span class="tile-text">Medical Records</span>
+      </button>
+      <button type="button" class="action-tile" data-section="reminderSection">
+        <span class="tile-icon" aria-hidden="true">&#9200;</span>
+        <span class="tile-text">Quick Medicine Reminder</span>
+      </button>
+      <button type="button" class="action-tile" data-section="historySection">
+        <span class="tile-icon" aria-hidden="true">&#8634;</span>
+        <span class="tile-text">View History</span>
+      </button>
+      <button type="button" class="action-tile" data-section="doctorVisitsSection">
+        <span class="tile-icon" aria-hidden="true">&#128197;</span>
+        <span class="tile-text">Doctor Visits</span>
+      </button>
+      <button type="button" class="action-tile" data-section="familySection">
+        <span class="tile-icon" aria-hidden="true">&#128106;</span>
+        <span class="tile-text">Family Members</span>
+      </button>
+      <button type="button" class="action-tile wide-tile" data-section="nearbySection">
+        <span class="tile-icon" aria-hidden="true">&#8982;</span>
+        <span class="tile-text">Nearby Help</span>
+      </button>
+      </div>
+    </section>
+
+    <input type="file" id="prescriptionInput" accept="image/*" multiple class="visually-hidden-input">
+
+    <section class="feature-card form-card" id="reminderSection">
+      <button type="button" class="back-button">Back</button>
+      <h2>Quick Medicine Reminder</h2>
+      <form id="reminderForm">
+        <label for="medicineName">Medicine names</label>
+        <input type="text" id="medicineName" placeholder="Example: paracetamol, crocin">
+
+        <fieldset class="time-of-day-options">
+          <legend>Times of day</legend>
+          <label>
+            <input type="checkbox" name="timesOfDay" value="Morning" checked>
+            Morning
+          </label>
+          <label>
+            <input type="checkbox" name="timesOfDay" value="Afternoon">
+            Afternoon
+          </label>
+          <label>
+            <input type="checkbox" name="timesOfDay" value="Evening">
+            Evening
+          </label>
+          <label>
+            <input type="checkbox" name="timesOfDay" value="Night">
+            Night
+          </label>
+        </fieldset>
+
+        <label for="reminderDuration">Duration in days</label>
+        <input type="number" id="reminderDuration" min="1" value="7">
+
+        <button type="submit" class="save-button">Save Reminder</button>
+      </form>
+
+      <div class="saved-reminder" id="savedReminder" hidden></div>
+      <div class="reminder-notification" id="reminderNotification"></div>
+      <div class="refill-notification" id="refillNotification"></div>
+      <div class="active-reminders">
+        <h3>Refill Reminders</h3>
+        <div class="history-list" id="refillRemindersList"></div>
+      </div>
+      <div class="active-reminders">
+        <h3>Today's Medicines</h3>
+        <div class="history-list" id="activeRemindersList"></div>
+      </div>
+      <div class="dose-summary" id="doseSummary">You missed 0 doses today</div>
+      <div class="dose-columns">
+        <div>
+          <h3>Taken Doses</h3>
+          <div class="history-list" id="takenDosesList"></div>
+        </div>
+        <div>
+          <h3>Missed Doses</h3>
+          <div class="history-list" id="missedDosesList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="feature-card preview-section" id="uploadSection">
+      <button type="button" class="back-button">Back</button>
+      <h2>Uploaded Prescription</h2>
+      <p class="section-note" id="uploadNote">Choose an image of your prescription to preview, scan it, and save it to Medical Records.</p>
+      <label for="prescriptionInput" class="save-button upload-trigger" id="chooseImageButton">Choose Images</label>
+      <div class="upload-preview-grid" id="uploadPreviewGrid" hidden></div>
+      <img id="prescriptionPreview" alt="Uploaded prescription preview" hidden>
+      <p class="scan-status" id="scanStatus"></p>
+      <div class="medicine-result" id="medicineResult"></div>
+      <pre class="ocr-text" id="ocrText"></pre>
+    </section>
+
+    <section class="feature-card info-card" id="medicalRecordsSection">
+      <button type="button" class="back-button">Back</button>
+      <h2>Medical Records</h2>
+      <div class="history-summary" id="medicalRecordsSummary"></div>
+      <div class="history-list history-date-list" id="medicalRecordDateList"></div>
+      <div class="history-list history-detail-list" id="medicalRecordDetails"></div>
+    </section>
+
+    <section class="feature-card info-card" id="historySection">
+      <button type="button" class="back-button">Back</button>
+      <h2>View History</h2>
+      <div class="history-tabs" role="tablist" aria-label="History categories">
+        <button type="button" class="history-tab-button active" data-history-tab="visitHistoryTab">Visit History</button>
+        <button type="button" class="history-tab-button" data-history-tab="dosageHistoryTab">Dosage History</button>
+      </div>
+      <div class="history-tab-panel" id="visitHistoryTab">
+        <div class="history-summary" id="visitHistorySummary"></div>
+        <div class="history-list history-date-list" id="visitHistoryDateList"></div>
+        <div class="history-list history-detail-list" id="visitHistoryDetails"></div>
+      </div>
+      <div class="history-tab-panel" id="dosageHistoryTab" hidden>
+        <div class="history-summary" id="dosageHistorySummary"></div>
+        <div class="history-list history-date-list" id="dosageDateList"></div>
+        <div class="history-list history-detail-list" id="dosageDateDetails"></div>
+      </div>
+    </section>
+
+    <section class="feature-card info-card" id="doctorVisitsSection">
+      <button type="button" class="back-button">Back</button>
+      <h2>Doctor Visits</h2>
+      <form class="doctor-visit-form" id="doctorVisitForm">
+        <label for="doctorVisitDate">Date</label>
+        <input type="date" id="doctorVisitDate" required>
+
+        <label for="doctorVisitReason">Reason <span>(optional)</span></label>
+        <input type="text" id="doctorVisitReason" placeholder="Example: Fever follow-up">
+
+        <button type="submit" class="save-button">Schedule Visit</button>
+      </form>
+      <div class="history-tabs" role="tablist" aria-label="Doctor visit categories">
+        <button type="button" class="history-tab-button active" data-visit-tab="upcomingVisitsTab">Upcoming</button>
+        <button type="button" class="history-tab-button" data-visit-tab="completedVisitsTab">Completed</button>
+      </div>
+      <div class="history-tab-panel" id="upcomingVisitsTab">
+        <div class="history-summary" id="upcomingVisitSummary"></div>
+        <div class="history-list" id="upcomingVisitsList"></div>
+      </div>
+      <div class="history-tab-panel" id="completedVisitsTab" hidden>
+        <div class="history-summary" id="completedVisitSummary"></div>
+        <div class="history-list history-date-list" id="completedVisitDateList"></div>
+        <div class="history-list history-detail-list" id="completedVisitDetails"></div>
+      </div>
+    </section>
+
+    <section class="feature-card info-card" id="familySection">
+      <button type="button" class="back-button">Back</button>
+      <h2>Family Members</h2>
+      <form id="familyForm">
+        <label for="familyName">Name</label>
+        <input type="text" id="familyName" placeholder="Example: Mom" required>
+
+        <label for="familyAge">Age <span>(optional)</span></label>
+        <input type="number" id="familyAge" min="0" placeholder="Example: 62">
+
+        <button type="submit" class="save-button">Add Member</button>
+      </form>
+
+      <div class="history-group">
+        <h3>Saved Members</h3>
+        <div class="history-list" id="familyMembersList"></div>
+      </div>
+    </section>
+
+    <section class="feature-card info-card" id="nearbySection">
+      <button type="button" class="back-button">Back</button>
+      <h2>Nearby Help</h2>
+      <p class="section-note">Find nearby hospitals, pharmacies, and doctors based on your current location.</p>
+      <div class="nearby-status" id="nearbyStatus">Open this section to load nearby help.</div>
+      <button type="button" class="save-button retry-nearby-button" id="retryNearbyButton" hidden>Retry Nearby Search</button>
+      <div class="history-list nearby-results" id="nearbyResults"></div>
+    </section>
+  </main>
+
+  <div class="buy-modal" id="buyModal">
+    <div class="buy-modal-content" role="dialog" aria-modal="true" aria-labelledby="buyOnlineTitle">
+      <button type="button" class="buy-online-close" id="closeModal" aria-label="Close">x</button>
+      <h3 id="buyOnlineTitle">View / Buy Online</h3>
+      <div class="buy-online-links">
+        <button type="button" id="googleLink" class="buy-online-link">Search on Google</button>
+        <button type="button" id="tataLink" class="buy-online-link">Search on Tata 1mg</button>
+        <button type="button" id="pharmeasyLink" class="buy-online-link">Search on PharmEasy</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="family-edit-modal" id="familyEditModal">
+    <form class="family-edit-content" id="familyEditForm" role="dialog" aria-modal="true" aria-labelledby="familyEditTitle">
+      <button type="button" class="family-edit-close" id="familyEditClose" aria-label="Close">x</button>
+      <h3 id="familyEditTitle">Edit Member</h3>
+      <label for="editFamilyName">Name</label>
+      <input type="text" id="editFamilyName" required>
+      <label for="editFamilyAge">Age <span>(optional)</span></label>
+      <input type="number" id="editFamilyAge" min="0">
+      <button type="submit" class="save-button">Save Changes</button>
+    </form>
+  </div>
+
+  <div class="delete-profile-modal" id="deleteProfileModal">
+    <div class="delete-profile-content" role="dialog" aria-modal="true" aria-labelledby="deleteProfileTitle" aria-describedby="deleteProfileMessage">
+      <h3 id="deleteProfileTitle">Delete Profile</h3>
+      <p id="deleteProfileMessage">This will remove all data for this person (medicines, history, prescriptions).</p>
+      <div class="delete-profile-actions">
+        <button type="button" class="delete-profile-cancel" id="deleteProfileCancel">Cancel</button>
+        <button type="button" class="delete-profile-confirm" id="deleteProfileConfirm">Delete Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="visit-status-modal" id="visitStatusModal">
+    <form class="visit-status-content" id="visitStatusForm" role="dialog" aria-modal="true" aria-labelledby="visitStatusTitle">
+      <button type="button" class="visit-status-close" id="visitStatusClose" aria-label="Close">x</button>
+      <h3 id="visitStatusTitle">Complete Visit</h3>
+      <p class="visit-status-note" id="visitStatusNote"></p>
+      <label for="visitStatusRemark">Remark <span id="visitStatusRemarkHint">(required)</span></label>
+      <input type="text" id="visitStatusRemark" required>
+      <div id="visitStatusNextVisitGroup">
+        <label for="visitStatusNextVisit">Next Visit Date <span>(optional)</span></label>
+        <input type="date" id="visitStatusNextVisit">
+      </div>
+      <button type="submit" class="save-button" id="visitStatusSaveButton">Save</button>
+    </form>
+  </div>
+
+  <div class="record-editor-modal" id="recordEditorModal">
+    <form class="record-editor-content" id="recordEditorForm" role="dialog" aria-modal="true" aria-labelledby="recordEditorTitle">
+      <button type="button" class="record-editor-close" id="recordEditorClose" aria-label="Close">x</button>
+      <h3 id="recordEditorTitle">Add Medicines</h3>
+      <p class="visit-status-note" id="recordEditorNote"></p>
+      <label for="recordEditorTextarea" id="recordEditorLabel">Add Medicines</label>
+      <textarea id="recordEditorTextarea" rows="6"></textarea>
+      <div class="record-editor-actions">
+        <button type="button" class="delete-profile-cancel" id="recordEditorCancel">Cancel</button>
+        <button type="submit" class="save-button" id="recordEditorSave">Save</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
