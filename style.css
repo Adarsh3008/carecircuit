@@ -641,8 +641,19 @@ p {
   margin-top: 0;
 }
 
-.retry-nearby-button {
+.nearby-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 14px;
+}
+
+.retry-nearby-button {
+  margin-bottom: 0;
+}
+
+.nearby-open-maps {
+  min-width: auto;
 }
 
 .ocr-history-item {
@@ -664,6 +675,22 @@ p {
   font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
+}
+
+.nearby-group {
+  display: grid;
+  gap: 12px;
+}
+
+.nearby-group-title {
+  margin: 0;
+  color: #153d39;
+  font-size: 16px;
+}
+
+.nearby-group-list {
+  display: grid;
+  gap: 12px;
 }
 
 .nearby-card {
